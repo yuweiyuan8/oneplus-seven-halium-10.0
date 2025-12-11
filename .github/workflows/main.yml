@@ -8,7 +8,7 @@ on:
 env:
   ADAPTATION_TOOLS_BRANCH: main
   DEV_TARBALL_VARIANT: _usrmerge
-  ROOTFS_URL: "https://ci.ubports.com/job/focal-hybris-rootfs-arm64/job/master/lastSuccessfulBuild/artifact/ubuntu-touch-android9plus-rootfs-arm64.tar.gz"
+  ROOTFS_URL: "https://ci.ubports.com/job/ubuntu-touch-rootfs/job/main/180/artifact/ubuntu-touch-android9plus-rootfs-arm64.tar.gz"
   OTA_CHANNEL: "20.04/arm64/android9plus/stable"
 
 jobs:
@@ -40,9 +40,54 @@ jobs:
 
     - name: Copy deviceinfo
       run: |
-        cp -r deviceinfo build/       
+        cp -r deviceinfo build/
+        cp -r oneplus-7x.dtb build/
 
     - name: Run build script
       working-directory: build
       run: |
         ./build.sh || true
+             
+    # --- 打包输出目录（OTA / GSI） ---
+    - name: Archive output
+      run: |
+        mkdir -p output
+        cp -r build/output/* output/ || true
+        cp -r build/images/* output/ || true
+        ls -alh output || true
+
+    # --- 上传构建产物为 Artifacts ---
+    - name: Upload artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: ubports-gsi-output
+        path: output/
+
+    # --- 自动发布 GitHub Release ---
+    - name: Create Release
+      id: create_release
+      uses: softprops/action-gh-release@v2
+      if: github.event_name == 'push'
+      with:
+        tag_name: gsi-${{ github.run_number }}
+        name: "Ubuntu Touch GSI Build #${{ github.run_number }}"
+        body: |
+          自动构建的 UBports GSI / OTA Release  
+          - 架构：ARM64  
+          - 渠道：${{ env.OTA_CHANNEL }}
+
+        draft: false
+        prerelease: false
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+    # --- 将产物上传到 Release 资产中 ---
+    - name: Upload Release Assets
+      uses: softprops/action-gh-release@v2
+      if: github.event_name == 'push'
+      with:
+        tag_name: gsi-${{ github.run_number }}
+        files: |
+          output/*
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
