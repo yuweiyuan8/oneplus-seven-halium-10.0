@@ -11,6 +11,9 @@ env:
   ROOTFS_URL: "https://ci.ubports.com/job/xenial-hybris-android9-rootfs-arm64/956/artifact/ubuntu-touch-android9-arm64.tar.gz"
   OTA_CHANNEL: "20.04/arm64/android9plus/stable"
 
+permissions:
+  contents: write
+
 jobs:
   build:
     runs-on: ubuntu-22.04
